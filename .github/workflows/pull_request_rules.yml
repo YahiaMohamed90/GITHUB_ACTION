@@ -16,19 +16,25 @@ jobs:
       
       - name: Check Pull Request Conditions
         run: |
-           # Limit the number of file changes
-           FILE_CHANGES=$(git diff --name-only HEAD~1 -- | wc -l)
-           if [[ "$FILE_CHANGES" -gt 1 ]]; then
+            if ! git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+               echo "⚠️ Warning: No previous commit found."
+               exit 0
+            fi
+
+            # Limit the number of file changes
+            FILE_CHANGES=$(git diff --name-only HEAD^ -- | wc -l)
+            if [[ "$FILE_CHANGES" -gt 1 ]]; then
                 echo "🛑 Error: The number of file changes exceeds the limit."
                 exit 1
-           fi
+            fi
 
-              # Limit the number of added lines
-           ADDED_LINES=$(git diff --stat HEAD~1 -- | awk '{print $4}')
-           if [[ "$ADDED_LINES" -gt 100 ]]; then
+            # Limit the number of added lines
+            ADDED_LINES=$(git diff --stat HEAD^ -- | awk '{print $4}')
+            if [[ "$ADDED_LINES" -gt 100 ]]; then
                echo "🛑 Error: The number of added lines exceeds the limit."
                exit 1
-           fi
+            fi
+
 
 # Perform code analysis or other checks here...
 # Add your custom condition checks and corresponding error messages.
