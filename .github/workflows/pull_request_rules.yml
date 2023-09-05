@@ -1,0 +1,49 @@
+name: Pull Request Rules
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  pull_request_rules:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      
+      - name: Check Pull Request Conditions
+        run: |
+          # Limit the number of file changes
+          FILE_CHANGES=$(git diff --name-only HEAD^ HEAD | wc -l)
+          if [[ "$FILE_CHANGES" -gt 1 ]]; then
+            echo "🛑 Error: The number of file changes exceeds the limit."
+            exit 1
+          fi
+          
+          # Limit the number of added lines
+          ADDED_LINES=$(git diff --stat HEAD^ HEAD | awk '{print $4}')
+          if [[ "$ADDED_LINES" -gt 100 ]]; then
+            echo "🛑 Error: The number of added lines exceeds the limit."
+            exit 1
+          fi
+          
+          # Perform code analysis or other checks here...
+          # Add your custom condition checks and corresponding error messages.
+          
+          # If no conditions are violated, the script will exit successfully.
+      
+      - name: Refuse Pull Request
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.pull_request.head.repo.name }}
+          issue_number: ${{ github.event.pull_request.number }}
+          body: |
+            ⛔️ This pull request violates the rules. Please check the guidelines and make the necessary changes.
+      
+    env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
