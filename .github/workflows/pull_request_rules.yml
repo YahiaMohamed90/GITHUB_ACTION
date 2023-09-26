@@ -13,21 +13,27 @@ jobs:
     steps:
       - name: Check file changes and added lines
         id: pr_stats
-        uses: andstor/file-changes-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          creator: ${{ github.actor }}
-          pr_head_sha: ${{ github.event.pull_request.head.sha }}
-
+        run: |
+          changes=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            | jq '.[] | select(.status != "removed")')
+          echo "::set-output name=changes::$changes"
+        
       - name: Refuse PR
         uses: actions/github-script@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const totalFileChanges = ${{ steps.pr_stats.outputs.files_changed }};
-            const totalAddedLines = ${{ steps.pr_stats.outputs.additions }};
+            const prFiles = ${{ steps.pr_stats.outputs.changes }};
+            let totalFileChanges = 0;
+            let totalAddedLines = 0;
 
-            if (totalFileChanges > 1 || totalAddedLines > 1) {
+            for (const file of prFiles) {
+              totalFileChanges++;
+              totalAddedLines += file.additions;
+            }
+
+            if (totalFileChanges > 10 || totalAddedLines > 100) {
               const prNumber = context.payload.pull_request.number;
               const owner = context.payload.repository.owner.login;
               const repo = context.payload.repository.name;
@@ -45,9 +51,11 @@ jobs:
               const declineBody = {
                 owner: owner,
                 repo: repo,
-                pull_number: prNumber
+                pull_number: prNumber,
+                state: "closed"
               };
 
               await github.pulls.update(declineBody);
+            }
             }
 
