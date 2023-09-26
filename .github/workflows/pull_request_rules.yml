@@ -1,55 +1,53 @@
-name: Auto PR Review
+name: PR Validation
 
 on:
   pull_request:
     types:
       - opened
+      - synchronize
 
 jobs:
-  pull-request-review:
+  validate_pr:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Check file changes and added lines
+        id: pr_stats
+        uses: andstor/file-changes-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          creator: ${{ github.actor }}
+          pr_head_sha: ${{ github.event.pull_request.head.sha }}
 
-      - name: Check file changes limit
-        run: |
+      - name: Refuse PR
+        uses: actions/github-script@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const totalFileChanges = ${{ steps.pr_stats.outputs.files_changed }};
+            const totalAddedLines = ${{ steps.pr_stats.outputs.additions }};
 
-                
-                changed_files=$(git diff --name-only HEAD^ 1>/dev/null || echo "")
-                 file_changes_limit=1
+            if (totalFileChanges > 10 || totalAddedLines > 100) {
+              const prNumber = context.payload.pull_request.number;
+              const owner = context.payload.repository.owner.login;
+              const repo = context.payload.repository.name;
+              const comment = `Sorry, your pull request exceeds the file changes and added lines limit. Please make sure your changes comply with our guidelines.`;
 
-                if [ -z "$changed_files" ]; then
-                echo "No commits found in the repository."
-                exit 1
-                fi
+              const body = {
+                owner: owner,
+                repo: repo,
+                issue_number: prNumber,
+                body: comment
+              };
 
-                if [ "$(echo "$changed_files" | wc -l)" -gt "$file_changes_limit" ]; then
-                  echo "::error::This PR exceeds the file changes limit ($file_changes_limit files)."
-                  exit 1
-                fi
+              await github.issues.createComment(body);
 
-      - name: Check added lines limit
-        run: |
-                 added_lines=$(git diff --numstat HEAD^ | awk '{ sum += $1 } END { print sum }')
-                 added_lines_limit=100
-                 if [ $added_lines -gt $added_lines_limit ]; then
-                   echo "::error::This PR exceeds the added lines limit ($added_lines_limit lines)."
-                   exit 1
-                 fi
+              const declineBody = {
+                owner: owner,
+                repo: repo,
+                pull_number: prNumber
+              };
 
-      - name: Refuse the pull request
-        run: |
-          pr_number=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
-          github_token=${{ secrets.GITHUB_TOKEN }}
-          curl -X POST \
-            -H "Authorization: token $github_token" \
-            -H "Content-Type: application/json" \
-            -d '{"body": "This pull request does not meet the criteria."}' \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$pr_number/comments"
-          echo "::set-output name=refused::true"
+              await github.pulls.update(declineBody);
+            }
 
-      - name: Notify refusal in a PR comment
-        if: steps.refuse.outputs.refused == 'true'
-        run: echo "This pull request has been refused."
