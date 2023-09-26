@@ -24,12 +24,19 @@ jobs:
 
       - name: Check added lines limit
         run: |
-          added_lines=$(git diff --numstat HEAD^ | awk '{ sum += $1 } END { print sum }')
-          added_lines_limit=10
-          if [ $added_lines -gt $added_lines_limit ]; then
-            echo "::error::This PR exceeds the added lines limit ($added_lines_limit lines)."
-            exit 1
-          fi
+                if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+                   echo "::error::Not inside a Git repository. Please run this script within a Git repository."
+                   exit 1
+                fi
+
+                changed_files=$(git diff --name-only HEAD^)
+                file_changes_limit=10
+                if [ $(echo "$changed_files" | wc -l) -gt $file_changes_limit ]; then
+                  echo "::error::This PR exceeds the file changes limit ($file_changes_limit files)."
+                  exit 1
+                fi
+
+
 
 
       - name: Refuse the pull request
