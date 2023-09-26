@@ -1,50 +1,48 @@
-name: Pull Request Rules
+name: Auto PR Review
 
 on:
   pull_request:
     types:
       - opened
-      - synchronize
 
 jobs:
-  pull_request_rules:
+  pull-request-review:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v2
-      
-      - name: Check file changes
+
+      - name: Check file changes limit
         run: |
-          FILE_CHANGES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} -- | wc -l)
-          if [[ "$FILE_CHANGES" -gt 1 ]]; then
-            echo "🛑 Error: The number of file changes exceeds the limit."
+          changed_files=$(git diff --name-only HEAD^)
+          file_changes_limit=10
+          if [ $(echo "$changed_files" | wc -l) -gt $file_changes_limit ]; then
+            echo "::error::This PR exceeds the file changes limit ($file_changes_limit files)."
             exit 1
           fi
 
-      - name: Check added lines
+      - name: Check added lines limit
         run: |
-          ADDED_LINES=$(git diff --stat ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} -- | awk '{print $4}')
-          if [[ "$ADDED_LINES" -gt 100 ]]; then
-            echo "🛑 Error: The number of added lines exceeds the limit."
+          added_lines=$(git diff --numstat HEAD^ | awk '{ sum += $1 } END { print sum }')
+          added_lines_limit=10
+          if [ $added_lines -gt $added_lines_limit ]; then
+            echo "::error::This PR exceeds the added lines limit ($added_lines_limit lines)."
             exit 1
           fi
 
 
-# Perform code analysis or other checks here...
-# Add your custom condition checks and corresponding error messages.
+      - name: Refuse the pull request
+        run: |
+          pr_number=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+          github_token=${{ secrets.GITHUB_TOKEN }}
+          curl -X POST \
+            -H "Authorization: token $github_token" \
+            -H "Content-Type: application/json" \
+            -d '{"body": "This pull request does not meet the criteria."}' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$pr_number/comments"
+          echo "::set-output name=refused::true"
 
-# If no conditions are violated, the script will exit successfully.
-      
-      - name: Refuse Pull Request
-        uses: octokit/request-action@v2.x
-        with:
-          route: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.pull_request.head.repo.name }}
-          issue_number: ${{ github.event.pull_request.number }}
-          body: |
-            ⛔️ This pull request violates the rules. Please check the guidelines and make the necessary changes.
-      
-    env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Notify refusal in a PR comment
+        if: steps.refuse.outputs.refused == 'true'
+        run: echo "This pull request has been refused."
