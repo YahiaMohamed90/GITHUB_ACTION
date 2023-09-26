@@ -1,52 +1,46 @@
-name: PR Validation
+name: Refuse PR
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
 
 jobs:
-  validate_pr:
+  name:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check file changes and added lines
-        id: pr_stats
+      - uses: actions/checkout@v3
+
+      - name: Get changed files
+        run: git diff --name-only HEAD HEAD~1 > changed_files.txt
+
+      - name: Count changed files
+        run: cat changed_files.txt | wc -l > num_changed_files.txt
+
+      - name: Get number of added lines
+        run: git diff --numstat HEAD HEAD~1 > numstat.txt
+
+      - name: Count added lines
+        run: grep '+' numstat.txt | awk '{s+=$1} END {print s}' > num_added_lines.txt
+
+      - name: Check if number of changed files is greater than limit
         run: |
-          changes=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            | jq '.[] | select(.status != "removed")')
-          echo "::set-output name=changes::$changes"
+          if [ $(cat num_changed_files.txt) -gt 1 ]; then
+            echo 'Number of changed files is greater than limit'
+            exit 1
+          fi
 
-
-
-      - name: Setup packages
+      - name: Check if number of added lines is greater than limit
         run: |
-          sudo apt update
-          sudo apt install curl
-          sudo apt install jq   
-        
-      - name: Refuse PR
-        uses: actions/github-script@v4
+          if [ $(cat num_added_lines.txt) -gt 1 ]; then
+            echo 'Number of added lines is greater than limit'
+            exit 1
+          fi
+
+      - name: Refuse pull request
+        uses: actions/github-script@v5
         with:
-         github_token: ${{ secrets.GITHUB_TOKEN }}
-         script: |
-           pr_files=$(jq -r '.pull_request.files' "$GITHUB_EVENT_PATH")
-           totalFileChanges=0
-           totalAddedLines=0
-           for file in $pr_files; do
-           totalFileChanges=$((totalFileChanges + 1))
-           additions=$(jq -r ".additions" <<< "$file")
-           totalAddedLines=$((totalAddedLines + additions))
-           done
-           if (( totalFileChanges > 1 || totalAddedLines > 1 )); then
-            prNumber=$(jq -r '.number' "$GITHUB_EVENT_PATH")
-            owner=$(jq -r '.repository.owner.login' "$GITHUB_EVENT_PATH")
-            repo=$(jq -r '.repository.name' "$GITHUB_EVENT_PATH")
-            comment="Sorry, your pull request exceeds the file changes and added lines limit. Please make sure your changes comply with our guidelines."
-            body="{ \"owner\": \"$owner\", \"repo\": \"$repo\", \"issue_number\": $prNumber, \"body\": \"$comment\" }"
-            curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$body" "https://api.github.com/repos/$owner/$repo/issues/$prNumber/comments"
-            declineBody="{ \"owner\": \"$owner\", \"repo\": \"$repo\", \"pull_number\": $prNumber, \"state\": \"closed\" }"
-            curl -X PATCH -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$declineBody" "https://api.github.com/repos/$owner/$repo/pulls/$prNumber"
-            fi
+          script: |
+              github.issues.createComment({
+              issue_number: context.issue.number,
+              body: 'Pull request refused due to too many changed files or added lines.'
+              })
+              """
