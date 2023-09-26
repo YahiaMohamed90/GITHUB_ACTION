@@ -27,7 +27,7 @@ jobs:
             const totalFileChanges = ${{ steps.pr_stats.outputs.files_changed }};
             const totalAddedLines = ${{ steps.pr_stats.outputs.additions }};
 
-            if (totalFileChanges > 10 || totalAddedLines > 100) {
+            if (totalFileChanges > 1 || totalAddedLines > 1) {
               const prNumber = context.payload.pull_request.number;
               const owner = context.payload.repository.owner.login;
               const repo = context.payload.repository.name;
