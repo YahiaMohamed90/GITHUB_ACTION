@@ -1,46 +1,25 @@
-name: Refuse PR
+name: Pull Request Limit
 
 on:
   pull_request:
-
+    types:
+      - opened
+      - synchronize
+      
 jobs:
-  name:
+  check_changes:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Get changed files
-        run: git diff --name-only HEAD HEAD~1 > changed_files.txt
-
-      - name: Count changed files
-        run: cat changed_files.txt | wc -l > num_changed_files.txt
-
-      - name: Get number of added lines
-        run: git diff --numstat HEAD HEAD~1 > numstat.txt
-
-      - name: Count added lines
-        run: grep '+' numstat.txt | awk '{s+=$1} END {print s}' > num_added_lines.txt
-
-      - name: Check if number of changed files is greater than limit
-        run: |
-          if [ $(cat num_changed_files.txt) -gt 1 ]; then
-            echo 'Number of changed files is greater than limit'
-            exit 1
-          fi
-
-      - name: Check if number of added lines is greater than limit
-        run: |
-          if [ $(cat num_added_lines.txt) -gt 1 ]; then
-            echo 'Number of added lines is greater than limit'
-            exit 1
-          fi
-
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Count file changes
+        id: count
+        run: echo "::set-output name=changes::$(git diff --numstat ${{ github.base_ref }}...${{ github.head_ref }} | wc -l)"
+        
       - name: Refuse pull request
-        uses: actions/github-script@v5
-        with:
-          script: |
-              github.issues.createComment({
-              issue_number: context.issue.number,
-              body: 'Pull request refused due to too many changed files or added lines.'
-              })
-              """
+        if: ${{ steps.count.outputs.changes > 1 }}
+        run: |
+          echo "Pull request exceeds the limit of 10 file changes"
+          exit 1
