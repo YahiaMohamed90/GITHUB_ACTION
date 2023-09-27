@@ -1,35 +1,34 @@
-name: Pull Request Rules
+name: Auto Reject PR
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
+    types: [opened, synchronize]
 
 jobs:
-  pull_request_rules:
+  auto_reject_pr:
     runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-      
-      - name: Check Pull Request Conditions
-        run: |
-           exit 0
-           echo " no pull request "
 
-  
-          # If no conditions are violated, the script will exit successfully.
-      
-      - name: Refuse Pull Request
-        uses: octokit/request-action@v2.x
-        with:
-          route: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.pull_request.head.repo.name }}
-          issue_number: ${{ github.event.pull_request.number }}
-          body: |
-            ⛔️ This pull request violates the rules. Please check the guidelines and make the necessary changes.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Check commit message
+        id: commit
+        run: |
+          COMMIT_MSG=$(git log --format=%B -n 1 ${{ github.event.pull_request.head.sha }})
+          if [[ ! "$COMMIT_MSG" =~ "homos" ]]; then
+            echo "::set-output name=reject::true"
+          else
+            echo "::set-output name=reject::false"
+          fi
+
+      - name: Reject PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.commit.outputs.reject == 'true'
+        run: |
+          COMMENT_BODY="🚫 This pull request has been automatically rejected because the commit message does not contain the keyword 'homos'. Please revise your commit message and resubmit the pull request."
+          curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d "{\"body\": \"$COMMENT_BODY\"}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
