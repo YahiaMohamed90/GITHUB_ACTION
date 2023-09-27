@@ -1,28 +1,38 @@
-name: Pull Request Limit
+name: Pull Request Rules
 
 on:
   pull_request:
-    branches:
-      - dev
-      - master
     types:
       - opened
       - synchronize
-      
+
 jobs:
-  check_changes:
+  pull_request_rules:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v2
-        
-      - name: Count file changes
-        id: count
-        run: echo "::set-output name=changes::$(git diff --numstat ${{ github.base_ref }}...${{ github.head_ref }} | wc -l)"
-        
-      - name: Refuse pull request
-        if: ${{ steps.count.outputs.changes > 1 }}
+      
+      - name: Check Pull Request Conditions
         run: |
-          echo "Pull request exceeds the limit of 10 file changes"
-          exit 1
+          # Limit the number of file changes
+          FILE_CHANGES=$(git diff --name-only HEAD^ HEAD | wc -l)
+          if [[ "$FILE_CHANGES" -gt 1 ]]; then
+            echo "🛑 Error: The number of file changes exceeds the limit."
+            exit 1
+          fi
+          
+          # If no conditions are violated, the script will exit successfully.
+      
+      - name: Refuse Pull Request
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.pull_request.head.repo.name }}
+          issue_number: ${{ github.event.pull_request.number }}
+          body: |
+            ⛔️ This pull request violates the rules. Please check the guidelines and make the necessary changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
