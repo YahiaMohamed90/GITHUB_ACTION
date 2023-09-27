@@ -1,20 +1,22 @@
-name: Auto PR Review
+name: Pull Request Rules
 
 on:
   pull_request:
     types:
       - opened
+      - synchronize
 
 jobs:
-  pull-request-review:
+  pull_request_rules:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v2
-
-      - name: Check file changes limit
+      
+      - name: Check Pull Request Conditions
         run: |
+
           changed_files=$(git diff --name-only HEAD^)
           file_changes_limit=1
           if [ $(echo "$changed_files" | wc -l) -gt $file_changes_limit ]; then
@@ -37,3 +39,23 @@ jobs:
       - name: Notify refusal in a PR comment
         if: steps.refuse.outputs.refused == 'true'
         run: echo "This pull request has been refused."
+          # Limit the number of file changes
+          FILE_CHANGES=$(git diff --name-only --root HEAD | wc -l)
+          if [[ "$FILE_CHANGES" -gt 1 ]]; then
+            echo "🛑 Error: The number of file changes exceeds the limit."
+            exit 1
+          fi
+          
+          # If no conditions are violated, the script will exit successfully.
+      
+      - name: Refuse Pull Request
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.pull_request.head.repo.name }}
+          issue_number: ${{ github.event.pull_request.number }}
+          body: |
+            ⛔️ This pull request violates the rules. Please check the guidelines and make the necessary changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
