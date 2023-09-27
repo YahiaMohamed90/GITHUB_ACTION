@@ -16,8 +16,9 @@ jobs:
       
       - name: Check Pull Request Conditions
         run: |
+          git pull origin master
           # Limit the number of file changes
-          FILE_CHANGES=$(git diff --name-only HEAD^ HEAD | wc -l)
+          FILE_CHANGES=$(git diff --name-only HEAD~1 HEAD | wc -l)
           if [[ "$FILE_CHANGES" -gt 1 ]]; then
             echo "🛑 Error: The number of file changes exceeds the limit."
             exit 1
