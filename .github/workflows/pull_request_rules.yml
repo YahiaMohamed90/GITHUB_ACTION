@@ -16,7 +16,7 @@ jobs:
       
       - name: Check Pull Request Conditions
         run: |
-           exit 0
+           exit 1
            echo " no pull request "
 
   
