@@ -1,20 +1,17 @@
-name: Pull Request Rules
+name: Count modified files
 
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
+  push:
+    branches: master
 
 jobs:
-  pull_request_rules:
+  build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-      
-      - name: Check Pull Request Conditions
+      - uses: actions/checkout@v3
+
+      - name: Count modified files
         run: |
             MODIFIED_FILES=$(git diff dev --name-only )
             FILE_COUNT=$(echo "$MODIFIED_FILES" | wc -l)
