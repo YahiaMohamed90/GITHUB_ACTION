@@ -3,6 +3,10 @@ name: Count modified files
 on:
   pull_request:
     types: [opened, synchronize]
+    branches:
+      - master
+      - dev
+ 
 
 
 jobs:
