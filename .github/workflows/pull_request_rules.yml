@@ -28,7 +28,7 @@ jobs:
             MODIFIED_FILES=$(git diff origin/master origin/dev --name-only)
             FILE_COUNT=$(echo "$MODIFIED_FILES" | wc -l)
             echo "$FILE_COUNT"
-            if [ &FILE_COUNT -gt 2 ]; then
+            if [ "&FILE_COUNT" -gt 2 ]; then
             COMMENT_BODY="🚫 This pull request has been automatically rejected because it modifies more than one file."
             curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
