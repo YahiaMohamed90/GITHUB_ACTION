@@ -32,7 +32,6 @@ jobs:
       - name: Reject PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: steps.file_count.outputs.count > 2
         run: |
           COMMENT_BODY="🚫 This pull request has been automatically rejected because it modifies more than one file. Please create separate pull requests for each file change to ensure better reviewability and maintainability."
           curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
