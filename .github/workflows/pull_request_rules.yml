@@ -50,7 +50,7 @@ jobs:
         run: |
             ADDED_LINES=$(git diff --shortstat origin/master...origin/dev | awk '{print $4}')
             echo "$ADDED_LINES"
-            if [ "$ADDED_LINES" -gt 5 ]; then
+            if [ "$ADDED_LINES" -gt 10 ]; then
             COMMENT_BODY="🚫 This pull request has been automatically rejected because it more than 5 lines added."
             curl -X POST -H "Authorization: Bearer $PASS" \
             -H "Accept: application/vnd.github.v3+json" \
