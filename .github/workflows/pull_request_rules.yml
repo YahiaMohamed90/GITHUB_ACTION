@@ -57,8 +57,8 @@ jobs:
             -d "{\"body\": \"$COMMENT_BODY\"}" \
             "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
             else
-                curl --request PATCH \
-               --url https://api.github.com/repos/:owner/:repo/pulls/:pull_number \
+               curl --request PATCH \
+               --url https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }} \
                --header 'authorization: Bearer $GITHUB_TOKEN' \
                --header 'content-type: application/json' \
                --data '{
