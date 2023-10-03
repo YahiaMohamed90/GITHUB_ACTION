@@ -48,7 +48,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            ADDED_LINES=$(git diff --shortstat origin/main...origin/dev | awk '{print $4}')
+            ADDED_LINES=$(git diff --shortstat origin/master...origin/dev | awk '{print $4}')
             echo "$ADDED_LINES"
             if [ "$ADDED_LINES" -gt 5 ]; then
             COMMENT_BODY="🚫 This pull request has been automatically rejected because it more than 5 lines added."
