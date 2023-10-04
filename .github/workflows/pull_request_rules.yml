@@ -51,13 +51,8 @@ jobs:
             ADDED_LINES=$(git diff --shortstat origin/master...origin/dev | awk '{print $4}')
             echo "$ADDED_LINES"
             if [ "$ADDED_LINES" -gt 10 ]; then
-            COMMENT_BODY="🚫 This pull request has been automatically rejected because it more than 5 lines added."
-            curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -d "{\"body\": \"$COMMENT_BODY\"}" \
-            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
-            else
-               curl -X PATCH \
+           
+              curl -X PATCH \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               -d '{
@@ -65,5 +60,12 @@ jobs:
                   "state": "closed"
                   }' \
                   https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}
+            else
+
+             COMMENT_BODY="🚫 This pull request has been automatically approved."
+            curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d "{\"body\": \"$COMMENT_BODY\"}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
             fi
                  
