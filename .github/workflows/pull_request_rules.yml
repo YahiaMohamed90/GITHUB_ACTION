@@ -21,7 +21,7 @@ jobs:
         run: git branch -a
       - name: Get current branch name
         run: echo "${GITHUB_REF#refs/heads/}"
-      - name: Count modified files
+      - name: Count changed files
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -29,13 +29,16 @@ jobs:
             FILE_COUNT=$(echo "$MODIFIED_FILES" | wc -l)
             echo "$FILE_COUNT"
             if [ "$FILE_COUNT" -gt 2 ]; then
-            COMMENT_BODY="🚫 This pull request has been automatically rejected because it modifies more than one file."
-            curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -d "{\"body\": \"$COMMENT_BODY\"}" \
-            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+             curl -X PATCH \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -d '{
+                  "body": "This pull request has been closed because the limit of files changed are exceeded." ,
+                  "state": "closed"
+                  }' \
+                  https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}
             else
-            COMMENT_BODY="This pull request has been automatically approved ."
+            COMMENT_BODY="✅ This pull request has been automatically approved files changed in the limit."
             curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             -d "{\"body\": \"$COMMENT_BODY\"}" \
@@ -51,21 +54,46 @@ jobs:
             ADDED_LINES=$(git diff --shortstat origin/master...origin/dev | awk '{print $4}')
             echo "$ADDED_LINES"
             if [ "$ADDED_LINES" -gt 10 ]; then
-           
               curl -X PATCH \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               -d '{
-                  "body": "This pull request has been closed." ,
+                  "body": "This pull request has been closed because the limit of lines are exceeded." ,
                   "state": "closed"
                   }' \
                   https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}
             else
-
-             COMMENT_BODY="🚫 This pull request has been automatically approved."
+            COMMENT_BODY="✅ This pull request has been automatically approved number of added lines are in limit."
             curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             -d "{\"body\": \"$COMMENT_BODY\"}" \
             "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
             fi
-                 
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        
+      - name: Analyze code
+        run: dart analyze 
+
+      - name: Post comment if errors in dart code
+        if: ${{ failure() }}
+        run: |
+              curl -X PATCH \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -d '{
+                  "body": "This pull request has been closed because there is an errror on dart code." ,
+                  "state": "closed"
+                  }' \
+                  https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}   
+                  
+      - name: Post comment if no errors in dart code
+        if: ${{ !failure() }}        
+        run: |
+           COMMENT_BODY="✅ This pull request has been automatically approved the dart code pass the test."
+            curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d "{\"body\": \"$COMMENT_BODY\"}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+             
