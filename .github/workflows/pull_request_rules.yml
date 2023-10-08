@@ -58,7 +58,7 @@ jobs:
             curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             -d '{"body": "Please make the following changes: ...", "event": "REQUEST_CHANGES"}' \
-             "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/reviews"
+             "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews"
             else
             
             COMMENT_BODY="✅ This pull request has been automatically approved number of added lines are in limit."
