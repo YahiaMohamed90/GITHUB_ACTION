@@ -25,7 +25,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            MODIFIED_FILES=$(git diff  origin/master origin/dev --name-only)
+            MODIFIED_FILES=$(git diff  origin/${{ github.base_ref }} origin/${{ github.head_ref }} --name-only)
             FILE_COUNT=$(echo "$MODIFIED_FILES" | wc -l)
             echo "$FILE_COUNT"
             if [ "$FILE_COUNT" -gt 2 ]; then
@@ -50,7 +50,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            ADDED_LINES=$(git diff --shortstat origin/master...origin/dev | awk '{print $4}')
+            ADDED_LINES=$(git diff --shortstat origin/${{ github.base_ref }}...origin/${{ github.head_ref }} | awk '{print $4}')
             echo "$ADDED_LINES"
             if [ "$ADDED_LINES" -gt 10 ]; then
             
