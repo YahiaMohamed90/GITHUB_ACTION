@@ -80,7 +80,7 @@ jobs:
               curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               -d '{"body": "Please make the following changes: check your code before push please", "event": "REQUEST_CHANGES"}' \
-              "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews"
+               "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews"
                   
       - name: Post comment if no errors in dart code
         if: ${{ !failure() }}        
