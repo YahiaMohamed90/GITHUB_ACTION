@@ -55,6 +55,7 @@ jobs:
             echo "$ADDED_LINES"
             if [ "$ADDED_LINES" -gt 10 ]; then
                 POST https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/reviews
+             POST https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/reviews
             {
                "body": "Please make the following changes: ...",
                "event": "REQUEST_CHANGES"
