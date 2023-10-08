@@ -54,14 +54,11 @@ jobs:
             ADDED_LINES=$(git diff --shortstat origin/master...origin/dev | awk '{print $4}')
             echo "$ADDED_LINES"
             if [ "$ADDED_LINES" -gt 10 ]; then
-              curl -X PATCH \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              -d '{
-                  "body": "This pull request has been closed because the limit of lines are exceeded." ,
-                  "state": "closed"
-                  }' \
-                  https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}
+                POST https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/reviews
+            {
+               "body": "Please make the following changes: ...",
+               "event": "REQUEST_CHANGES"
+            }
             else
             COMMENT_BODY="✅ This pull request has been automatically approved number of added lines are in limit."
             curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
