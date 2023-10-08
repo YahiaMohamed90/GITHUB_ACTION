@@ -75,6 +75,8 @@ jobs:
         run: dart analyze 
 
       - name: Post comment if errors in dart code
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ failure() }}
         run: |
               curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -83,6 +85,8 @@ jobs:
                "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews"
                   
       - name: Post comment if no errors in dart code
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ !failure() }}        
         run: |
            COMMENT_BODY="✅ This pull request has been automatically approved the dart code pass the test."
