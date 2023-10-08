@@ -25,7 +25,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-            MODIFIED_FILES=$(git diff origin/master origin/dev --name-only)
+            MODIFIED_FILES=$(git diff origin/dev --name-only)
             FILE_COUNT=$(echo "$MODIFIED_FILES" | wc -l)
             echo "$FILE_COUNT"
             if [ "$FILE_COUNT" -gt 2 ]; then
