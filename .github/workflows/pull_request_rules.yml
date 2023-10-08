@@ -54,7 +54,7 @@ jobs:
             ADDED_LINES=$(git diff --shortstat origin/master...origin/dev | awk '{print $4}')
             echo "$ADDED_LINES"
             if [ "$ADDED_LINES" -gt 10 ]; then
-                POST https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/reviews
+            
              POST https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/reviews
             {
                "body": "Please make the following changes: ...",
